@@ -1,0 +1,5 @@
+- included_paths:
+    - 'sensat/**'
+  disabled_rules:
+    - 'core::0191::csharp-namespace' # csharp namespaces are managed by buf
+    - 'core::0133::request-id-field' # We don't support user-defined entities ids in create requests yet

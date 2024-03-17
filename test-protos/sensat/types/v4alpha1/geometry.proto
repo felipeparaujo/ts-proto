@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package sensat.types.v4alpha1;
+
+import "google/api/field_behavior.proto";
+
+// Bounds of axis-aligned extents and bounding box are indicated by two corners
+message ExtentOrBoundingBox {
+  // The position of a corner
+  message Position {
+    // X axis
+    // We use optional on a required field to differentiate between 0 and unset.
+    // For more info see: https://aip.dev/149#field-behavior-and-optional
+    optional double x = 1 [(google.api.field_behavior) = REQUIRED];
+
+    // Y axis
+    // We use optional on a required field to differentiate between 0 and unset.
+    // For more info see: https://aip.dev/149#field-behavior-and-optional
+    optional double y = 2 [(google.api.field_behavior) = REQUIRED];
+
+    // Z axis. Not required because this message could be used for a 2D representation too.
+    optional double z = 3 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // lower corner
+  Position min = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // upper corner
+  Position max = 2 [(google.api.field_behavior) = REQUIRED];
+}

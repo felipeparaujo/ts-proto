@@ -1,0 +1,473 @@
+syntax = "proto3";
+
+package sensat.data.assets.v4alpha1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/field_mask.proto";
+import "sensat/data/assets/v4alpha1/entities.proto";
+
+// A service for managing assets (files, layers, point clouds etc.)
+service AssetService {
+  // Creates an asset.
+  // Emits an `AssetChanged` event.
+  rpc CreateAsset(CreateAssetRequest) returns (Asset) {
+    option (google.api.http) = {
+      post: "/v4alpha1/{parent=projects/*}/assets"
+      body: "asset"
+    };
+
+    option (google.api.method_signature) = "parent,asset";
+  }
+
+  // Retrieves an asset.
+  // Will return assets that have been soft-deleted.
+  rpc GetAsset(GetAssetRequest) returns (Asset) {
+    option (google.api.http) = {get: "/v4alpha1/{name=projects/*/assets/*}"};
+
+    option (google.api.method_signature) = "name";
+  }
+
+  // Updates an asset.
+  // Emits an `AssetChanged` event.
+  rpc UpdateAsset(UpdateAssetRequest) returns (Asset) {
+    option (google.api.http) = {
+      patch: "/v4alpha1/{asset.name=projects/*/assets/*}"
+      body: "asset"
+    };
+
+    option (google.api.method_signature) = "asset,update_mask";
+  }
+
+  // Soft-deletes an asset.
+  // Emits an `AssetChanged` event.
+  rpc DeleteAsset(DeleteAssetRequest) returns (Asset) {
+    option (google.api.http) = {delete: "/v4alpha1/{name=projects/*/assets/*}"};
+
+    option (google.api.method_signature) = "name";
+  }
+
+  // Lists all assets.
+  rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse) {
+    option (google.api.http) = {get: "/v4alpha1/{parent=projects/*}/assets"};
+
+    option (google.api.method_signature) = "parent";
+  }
+
+  // Get a batch of assets.
+  // If any of the assets cannot be returned, the entire request will fail.
+  // Will return assets that have been soft-deleted.
+  rpc BatchGetAssets(BatchGetAssetsRequest) returns (BatchGetAssetsResponse) {
+    option (google.api.http) = {get: "/v4alpha1/{parent=project/*}/assets:batchGet"};
+  }
+
+  // Generate Transfer URLs for an asset's source.
+  // The URL could be for multipart or single part transfers, depending part_number being set.
+  // The first time the API a request for a source with part_number set it initializes the multipart
+  // transfer process. From that point onwards all requests for that source must contain part_number.
+  //
+  // If the asset state isn't TRANSFERRING, FAILED_PRECONDITION is returned.
+  // If the source doesn't exist in the asset, NOT_FOUND is returned.
+  //
+  // This service does NOT generate url for Assets going through an overwrite process.
+  // Overwriting is an internal-only process that requires direct access to the S3 bucket.
+  //
+  // These URLs are valid for 60 minutes. Users should request them as they are used rather than in batches.
+  // Requests made to the generated URLs must use the HTTP PUT method.
+  rpc GenerateAssetTransferURL(GenerateAssetTransferURLRequest) returns (GenerateAssetTransferURLResponse) {
+    option (google.api.http) = {
+      post: "/v4alpha1/{name=projects/*/assets/*}:generateTransferUrl"
+      body: "*"
+    };
+
+    option (google.api.method_signature) = "name,source_filepath";
+  }
+
+  // Generate a download URL for an asset's source.
+  //
+  // These URLs are valid for 60 minutes. Users should request them as they are used rather than in batches.
+  // Requests made to the generated URLs must use the HTTP GET method.
+  rpc GenerateAssetDownloadURL(GenerateAssetDownloadURLRequest) returns (GenerateAssetDownloadURLResponse) {
+    option (google.api.http) = {
+      post: "/v4alpha1/{name=projects/*/assets/*}:generateDownloadUrl"
+      body: "*"
+    };
+
+    option (google.api.method_signature) = "name,source_filepath";
+  }
+
+  // Initiates the overwrite process for this asset, a stopgap solution for overwritting an asset's source
+  // and output while we don't implement proper revisioning.
+  //
+  // Lifecycle management services will start treating this asset as if its state were TRANSFERRING.
+  // Calls to them will start using the parameters set by this call and eventually replace
+  // the top level attributes.
+  //
+  // Note that retrievals of this entity will still return the real state of the asset, only
+  // the lifecycle management services will treat it as if it were still TRANSFERRING. This
+  // is to allow for regular usage of assets while the overwrite process is happening.
+  //
+  // Only assets with a single source can be overwritten.
+  rpc OverwriteAsset(OverwriteAssetRequest) returns (OverwriteAssetResponse) {
+    option (google.api.http) = {
+      post: "/v4alpha1/{name=projects/*/assets/*}:overwrite"
+      body: "*"
+    };
+
+    option (google.api.method_signature) = "name,filename,size_bytes,sync_tracking";
+  }
+
+  // Activates an asset. In other words, the asset is ready to display.
+  // The `state` of the asset after activating is `ACTIVE`.
+  // `ActivateAsset` can be called on all assets in the state `PROCESSING`; Assets in a
+  // different state returns a `FAILED_PRECONDITION` error.
+  // Emits an `AssetChanged` event.
+  rpc ActivateAsset(ActivateAssetRequest) returns (ActivateAssetResponse) {
+    option (google.api.http) = {
+      post: "/v4alpha1/{name=projects/*/assets/*}:activate",
+      body: "*"
+    };
+
+    option (google.api.method_signature) = "name,output";
+  }
+
+  // Complete this asset's transfer phase.
+  // This endpoint triggers processing when enable_processing is set to true and the extension of
+  // one of the sources is a supported one.
+  // If the state of the asset isn't `TRANSFERRING`, this service will return `FAILED_PRECONDITION`.
+  // If the list of sources doesn't match the one in the Asset, this service will return `INVALID_ARGUMENT`
+  // For asset sources transfered through multipart transfer, all parts must be listed in the request.
+  // See Asset.Lifecycle for a more in-depth explanation of the lifecycle of assets.
+  // Emits an `AssetChanged` event.
+  rpc CompleteAsset(CompleteAssetRequest) returns (CompleteAssetResponse) {
+    option (google.api.http) = {
+      post: "/v4alpha1/{name=projects/*/assets/*}:complete"
+      body: "*"
+    };
+
+    option (google.api.method_signature) = "name,enable_processing";
+  }
+
+  // Transition this asset into a failed state.
+  //
+  // If the previous state was TRANSFERRING, the next state will be TRANSFER_FAILED.
+  // If the previous state was PROCESSING, the next state will be PROCESSING_FAILED.
+  // Other state transitions aren't allowed and the service will return FAILED_PRECONDITION.
+  // See Asset.Lifecycle for a more in-depth explanation of the lifecycle of assets.
+  //
+  // Any unfinished multipart transfer will be aborted as part of this request.
+  // Emits an `AssetChanged` event.
+  rpc FailAsset(FailAssetRequest) returns (FailAssetResponse) {
+    option (google.api.http) = {
+      post: "/v4alpha1/{name=projects/*/assets/*}:fail"
+      body: "*"
+    };
+
+    option (google.api.method_signature) = "name,failure_details";
+  }
+}
+
+// Create Asset Request.
+message CreateAssetRequest {
+  // The parent project where the asset is created.
+  // Format: projects/:projectId
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Project"
+  ];
+
+  // The asset to create
+  Asset asset = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Get Asset Request.
+message GetAssetRequest {
+  // The name of the asset to retrieve.
+  // Format: projects/{project}/assets/{asset}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "api.sensat.world/Asset"}
+  ];
+}
+
+// Update Asset Request.
+message UpdateAssetRequest {
+  // The asset to update.
+  //
+  // The asset's `name` field is used to identify the asset to update.
+  // Format: projects/:projectId/assets/:assetId
+  Asset asset = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The list of fields to update.
+  //
+  // Fields are specified relative to the asset
+  // (e.g. `title`, `timeline.visibility`; *not* `asset.title` or `asset.timeline.visibility`)
+  //
+  // Map items can be individually addressed. If necessary, such as when a map key contains a dot (.),
+  // paths can be escaped using backticks (`). For example. "sources.`a_file.dwg`.licence" would
+  // address `sources["a_file.dwg"].licence`.
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Delete Asset Request.
+message DeleteAssetRequest {
+  // The name of the asset to delete.
+  // Format: projects/{project}/assets/{asset}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "api.sensat.world/Asset"}
+  ];
+}
+
+// List Assets Request.
+message ListAssetsRequest {
+  // The parent which owns this collection of assets.
+  // Format: projects/{project}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Project"
+  ];
+
+  // The maximum number of assets to return.
+  // The service may return fewer than this value.
+  // The default value is 20. The maximum value is 200.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL
+  ];
+
+  // A page token, received from a previous `ListAssets` call.
+  // Provide this to retrieve the subsequent page.
+  //
+  // When paginating, all other parameters provided to `ListAssets` must match
+  // the call that provided the page token.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Shows soft-deleted assets if set.
+  bool show_deleted = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// List Assets Response.
+message ListAssetsResponse {
+  // All assets from the specific project.
+  repeated Asset assets = 1;
+
+  // A token, which can be sent as `page_token` to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2;
+}
+
+// Batch Get Assets Request.
+message BatchGetAssetsRequest {
+  // The parent shared by all the assets being retrieved.
+  // Format: projects/{project}
+  // If this is set, the parent of all of the assets specified in `names`
+  // must match this field.
+  string parent = 19 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Project"
+  ];
+
+  // The names of the assets to retrieve.
+  // A maximum of 1000 assets can be retrieved in a batch.
+  // Format: projects/{project}/assets/{asset}
+  repeated string names = 22 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "api.sensat.world/Asset"}
+  ];
+}
+
+// Batch Get Assets Response.
+message BatchGetAssetsResponse {
+  // The requested assets.
+  repeated Asset assets = 8;
+}
+
+// Activate Asset Request.
+message ActivateAssetRequest {
+  // The asset to update.
+  //
+  // The asset's `name` field is used to identify the asset to update.
+  // Format: projects/{projectId}/assets/{assetId}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Asset"
+  ];
+
+  // Asset's output to update
+  Asset.Output output = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Activate Asset Response.
+message ActivateAssetResponse {
+  // The activated asset.
+  Asset asset = 1;
+}
+
+// Fail Asset Request.
+message FailAssetRequest {
+  // The asset to update.
+  //
+  // The asset's `name` field is used to identify the asset to update.
+  // Format: projects/{projectId}/assets/{assetId}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Asset"
+  ];
+
+  // Details of the failure.
+  Asset.Lifecycle.FailureDetails failure_details = 32 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Fail Asset Resposne.
+message FailAssetResponse {
+  // The asset with its failure details and state updated.
+  Asset asset = 1;
+}
+
+// Complete Asset Request.
+message CompleteAssetRequest {
+  // The asset to update.
+  //
+  // The asset's `name` field is used to identify the asset to update.
+  // Format: projects/{projectId}/assets/{assetId}
+  string name = 19 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Asset"
+  ];
+
+  // List of transfer parts.
+  message Parts {
+    // Transfer parts.
+    repeated Part parts = 1;
+  }
+
+  // One of the parts that compose a multipart transfer source. To be used when the consumer
+  // split the source transfer into parts.
+  message Part {
+    // The part number. These get joined sequentially by AWS during this endpoints request processing.
+    int32 number = 1 [
+      (google.api.field_behavior) = REQUIRED
+    ];
+
+    // ETag of the part. These are provided by AWS on successful part transfer in the ETag header.
+    // It is up to consumers to store and manage these for successful transfers.
+    string etag = 2 [(google.api.field_behavior) = REQUIRED];
+  }
+
+  // Transfer parts. Map is from source filepath to a list of `Part`s. If a source wasn't transfered
+  // through a multipart transfer process, it doesn't have to be defined here.
+  map<string, Parts> parts = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // If this is set to true, subsequent processing is enabled and the asset
+  // is transitioned to PROCESSING state if its sources match our list of
+  // supported file extensions.
+  //
+  // Default value is false.
+  bool enable_processing = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Complete Asset Response
+message CompleteAssetResponse {
+  // Completed asset with its state updated.
+  Asset asset = 1;
+}
+
+// Generate Asset Transfer URL Request.
+message GenerateAssetTransferURLRequest {
+  // Asset that contains the source.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Asset"
+  ];
+
+  // Path of the source. Must match one of the existing sources filepath.
+  string source_filepath = 13 [(google.api.field_behavior) = REQUIRED];
+
+  // Number of the part to generate the request. If unset or 0, the request
+  // will be treated as a single part upload.
+  int32 part_number = 84 [
+    (google.api.field_behavior) = OPTIONAL
+  ];
+}
+
+// Generate Asset Transfer URL Response
+message GenerateAssetTransferURLResponse {
+  // Transfer URL, valid for 60 minutes. The HTTP method must be PUT when using this URL.
+  string uri = 13;
+}
+
+// Generate Asset Download URL Request
+message GenerateAssetDownloadURLRequest {
+  // Asset that contains the source.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Asset"
+  ];
+
+  // Path of the source. Must match one of the existing sources filepath.
+  string source_filepath = 13 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Generate Asset Download URL Response
+message GenerateAssetDownloadURLResponse {
+  // Download URL, valid for 60 minutes
+  string uri = 22;
+}
+
+// Overwrite Asset Request.
+message OverwriteAssetRequest {
+  // The asset to update.
+  //
+  // The asset's `name` field is used to identify the asset to update.
+  // Format: projects/{projectId}/assets/{assetId}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Asset"
+  ];
+
+  // Next source filename.
+  // Replaces the key in `Asset.sources[0]`
+  string filename = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Next source size, in bytes.
+  // Replaces `Asset.sources[0].size`
+  int64 size_bytes = 2 [
+    (google.api.field_behavior) = REQUIRED
+  ];
+
+  // Next revision label.
+  // Replaces `Asset.revision_label`
+  string revision_label = 38 [(google.api.field_behavior) = OPTIONAL];
+
+  // Next attributes.
+  // Replaces `Asset.attributes`
+  map<string, string> attributes = 95 [(google.api.field_behavior) = OPTIONAL];
+
+  // Next tracking information. Might contain updates to things like update_time, checksum and revision
+  // Replaces `Asset.sync_tracking`
+  Asset.SyncTracking sync_tracking = 12 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Overwrite Asset Response.
+message OverwriteAssetResponse {
+  // Asset bucket.
+  string bucket = 1;
+
+  // Destination the next revision of the source should be transferred to. Relative to bucket.
+  string source_path = 2;
+}
+
+// Event sent by various endpoints that modify assets
+//
+// This isn't a resource message, just an event message
+// so we disable linting for the resource annotation rule
+// (-- api-linter: core::0123::resource-annotation=disabled --)
+message AssetChangedEvent {
+  // Resource name
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.sensat.world/Asset"
+  ];
+}

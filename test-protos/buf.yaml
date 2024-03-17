@@ -1,0 +1,14 @@
+version: v1
+
+lint:
+  use:
+    - DEFAULT
+  except:
+    - ENUM_VALUE_PREFIX # https://aip.dev/126 says we shouldn't prefix enums with their own names.
+    - ENUM_ZERO_VALUE_SUFFIX # https://aip.dev/126 allows for the first value to be unknown when useful. api-linter takes care of linting for this case too.
+    - RPC_RESPONSE_STANDARD_NAME # https://aip.dev/135 allows RPC response name to be Empty instead of SomeClassResponse.
+    - RPC_REQUEST_RESPONSE_UNIQUE # https://aip.dev/131 clashes with requirement of return the resource itself in Get/Update requests
+
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/bufbuild/protovalidate

@@ -1,0 +1,461 @@
+syntax = "proto3";
+
+// Package follows Google's API design guidelines for versioning:
+// https://cloud.google.com/apis/design/versioning
+// It's also enforced by buf's linting
+package sensat.data.assets.v4alpha1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+import "google/rpc/code.proto";
+import "google/type/date.proto";
+import "sensat/types/v4alpha1/geometry.proto";
+
+// TODO: move these to their proto definitions once they exist
+// or are updated to pass api-linter
+option (google.api.resource_definition) = {
+  type: "api.sensat.world/Project"
+  pattern: "projects/{project}"
+  singular: "project"
+  plural: "projects"
+};
+option (google.api.resource_definition) = {
+  type: "api.sensat.world/CRS"
+  pattern: "crses/{crs}"
+  singular: "crs"
+  plural: "crses"
+};
+option (google.api.resource_definition) = {
+  type: "api.sensat.world/Folder"
+  pattern: "projects/{project}/folders/{folder}"
+  singular: "folder"
+  plural: "folders"
+};
+option (google.api.resource_definition) = {
+  type: "api.sensat.world/User"
+  pattern: "users/{user}"
+  singular: "user"
+  plural: "users"
+};
+// This definition is here instead of the Integration proto
+// because api-linter requires messages with resource definitions
+// to have a name attribute. To avoid adding it now, we just define
+// the resource here.
+option (google.api.resource_definition) = {
+  type: "api.sensat.world/Integration"
+  pattern: "projects/{project}/integrations/{integration}"
+  singular: "integration"
+  plural: "integrations"
+};
+
+// An asset is a file or collection of files that can be displayed,
+// processed and generate outputs. All files uploaded or otherwise
+// created in the platform are represented by this entity.
+message Asset {
+  option (google.api.resource) = {
+    type: "api.sensat.world/Asset"
+    pattern: "projects/{project}/assets/{asset}"
+    singular: "asset"
+    plural: "assets"
+  };
+
+  // Unique resource identifier. This is NOT the resource title and should not be used
+  // for display purposes. Follows https://aip.dev/122
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Resource name of the folder this asset belongs to.
+  string folder = 76 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.resource_reference).type = "api.sensat.world/Folder"
+  ];
+
+  // Human-readable title of this asset.
+  string title = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Human-readable description of this asset.
+  string description = 54 [(google.api.field_behavior) = OPTIONAL];
+
+  // Possible UM panels this asset may be displayed.
+  enum PanelVisibility {
+    // Default value. This value is unused.
+    PANEL_VISIBILITY_UNSPECIFIED = 0;
+
+    // Shows up in the 2D enviroment panel exclusively.
+    ONLY_2D = 1;
+
+    // Shows up in the 3D environment panel exclusively.
+    ONLY_3D = 2;
+
+    // Shows up in all panels.
+    ALWAYS = 3;
+
+    // Never shows up.
+    NEVER = 4;
+  }
+
+  // In which UM panel this asset will be displayed.
+  PanelVisibility panel_visibility = 2 [
+    (google.api.field_behavior) = REQUIRED
+  ];
+
+  // S3 bucket this asset's sources and output lives in.
+  string bucket = 32 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Path prefix in S3. This asset's sources and outputs use this attribute
+  // to construct their own paths, which means all sources and outputs exist
+  // under this path.
+  string path_prefix = 85 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Revision label, used when this asset was synced from a remote source such as a CDE.
+  // The term version is intentionally avoided as to not clash with API version
+  string revision_label = 71 [(google.api.field_behavior) = OPTIONAL];
+
+  // Generic attributes of the asset. These are user-visible and shouldn't have any semantics in our systems.
+  map<string, string> attributes = 95 [(google.api.field_behavior) = OPTIONAL];
+
+  // Bounds of the displayables of this asset in the output CRS.
+  // It's up to the user to interpret this attribute as either an extent or a bounding box.
+  // If this is an extent (2D) the Z axis on min and max will be 0 and should be ignored.
+  sensat.types.v4alpha1.ExtentOrBoundingBox extent_or_bounding_box = 38 [(google.api.field_behavior) = OPTIONAL];
+
+  // Asset's lifecycle management.
+  //
+  // State transitions (states in rectangles are rest states):
+  // ```
+  //             ┌──────────────────────────────────────┐
+  //             │                                      │
+  //             │                                  ┌───▼──┐
+  // ─────►TRANSFERRING────┬────►PROCESSING──────┬─►│ACTIVE│
+  //             │         │          │          │  └───┬──┘
+  //             │         │          │          │      │
+  //     ┌───────▼───────┐ │ ┌────────▼────────┐ │      │
+  //     │TRANSFER_FAILED│ │ │PROCESSING_FAILED│ │      │
+  //     └───────┬───────┘ │ └────────┬────────┘ │      │
+  //             │         │          │          │      │
+  //             │         └────────┐ │ ┌────────┘      │
+  //             │                  │ │ │               │
+  //             │                ┌─▼─▼─▼─┐             │
+  //             └───────────────►│DELETED│◄────────────┘
+  //                              └───────┘
+  // ```
+  //
+  // An asset goes through a few phases in its lifecycle:
+  //
+  // 1. Transferring: This is the initial state, where all sources that compose this asset
+  // are getting transferred to our file storage systems (buckets in S3). In this phase, the
+  // asset isn't usable as it's not complete yet. Once complete an asset either transitions to PROCESSING,
+  // if it has one of the sources has a supported file extensions, or it moves to ACTIVE if it doesn't.
+  //
+  //     * Transfer failed: Rest state. Transfer failed and the sources aren't accessible. They are treated
+  // as a single entity, so if an asset is composed by more than one source and only one of them fails,
+  // the state of the whole asset is `TRANSFER_FAILED`
+  //
+  // 2. Processing: Once transferring is complete, an asset can optionally go into the processing
+  // state depending on source file extensions. At this stage all sources are present in S3 and are accessible
+  // by the platform or processing jobs, which means they're downloadable. It's during this stage that the
+  // `output` attribute containing canvas displayables will be generate. If processing finishes successfully,
+  // the asset is transitioned to the ACTIVE state.
+  //
+  //     * Processing failed: Rest state. Transfer was successful but processing failed. Sources are accessible and the asset
+  // is complete but not displayable on canvas as there's no output.
+  //
+  // 3. Active: Rest state. Processing is done, both `sources` and `output` are complete and the asset is ready
+  // for displaying on canvas.
+  //
+  // 4. Deleted. At any point an asset can be deleted. It shouldn't be displayed in the canvas, but calls made to update
+  // it will still work.
+  message Lifecycle {
+    // Possible states of the asset in its lifecycle
+    enum State {
+      // Unspecified. This state is unused and disallowed by validation.
+      STATE_UNSPECIFIED = 0;
+
+      // Asset is incomplete, sources haven't finished transferring.
+      TRANSFERRING = 1;
+
+      // Transfer failed, failure_details will contain more information.
+      TRANSFER_FAILED = 2;
+
+      // Asset is complete and being processed by a job. Sources are available, output is not.
+      PROCESSING = 3;
+
+      // Processing failed, failure_details will contain more information.
+      PROCESSING_FAILED = 4;
+
+      // Asset is active. Transfer and processing are done.
+      ACTIVE = 5;
+
+      // Asset has been deleted.
+      DELETED = 6;
+    }
+
+    // Current state of the asset.
+    State state = 1 [
+      (google.api.field_behavior) = OUTPUT_ONLY
+    ];
+
+    // Asset creation time, in UTC.
+    google.protobuf.Timestamp create_time = 27 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Asset last update time, in UTC.
+    google.protobuf.Timestamp update_time = 129 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Asset deletion time, in UTC.
+    google.protobuf.Timestamp delete_time = 31 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // AWS Step Function execution ARN.
+    string execution_arn = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Details of the failure
+    message FailureDetails {
+      // Category of the failure. Will always be one of the gRPC error codes.
+      google.rpc.Code category = 1 [(google.api.field_behavior) = REQUIRED];
+    }
+
+    // Details of the failure
+    FailureDetails failure_details = 891 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Asset lifecycle. See `Lifecycle` message for explanation.
+  Lifecycle lifecycle = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // A representation of one of the sources that compose this entity. An asset can
+  // be composed of one or more source, which could be processed by background jobs
+  // depending on file extensions.
+  // Sources are references to paths in our file store system, and come along with
+  // some of that source's intrinsic properties such as sizes, licences, CRSes
+  //
+  // As we use S3 to store our sources, there are some limits that must be observed.
+  // Of note are part sizes and their limits: If a file is larger than 5GiB it must be broken
+  // down into parts of at least 5MiB (except for the last part) which must be transferred separately
+  // and completed once all exist within AWS.
+  //
+  // AWS's suggestion is to break uploads into 100MiB parts, but we leave it consumers
+  // to decide how to manage their upload parts.
+  //
+  // The GetAssetUploadURL endpoint generates signed URLs for the uploads and the CompleteAsset
+  // endpoint completes multipart uploads when they exist.
+  //
+  // For more information on S3 limits see https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html
+  message Source {
+    // Path in S3. Always starts with `Asset.path_prefix` and will live in `Asset.bucket`.
+    string path = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Size, in bytes.
+    int64 size_bytes = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Relative path of this file in disk. Must be unique across all sources.
+    string filepath = 978 [(google.api.field_behavior) = IMMUTABLE];
+
+    // Possible types of licence for this source.
+    enum Licence {
+      // Default value, licence isn't specified. Means this file can be  downloaded.
+      LICENCE_UNSPECIFIED = 0;
+
+      // Opensource. Means this file can be freely downloaded and distributed.
+      OPENSOURCE = 1;
+
+      // Restricted. Means this file cannot be download or distributed.
+      RESTRICTED = 2;
+    }
+
+    // Licence type.
+    Licence licence = 6 [
+      (google.api.field_behavior) = OPTIONAL
+    ];
+
+    // Legal notice required by some of our dataset providers.
+    string attribution = 59 [(google.api.field_behavior) = OPTIONAL];
+
+    // Original CRS of this file. Must exist before the asset is created.
+    // This is a reference to the CRS collection, not the hydrated CRS.
+    string crs = 2 [
+      (google.api.field_behavior) = OPTIONAL,
+      (google.api.resource_reference).type = "api.sensat.world/CRS"
+    ];
+
+    // Time this source was originally captured.
+    google.protobuf.Timestamp capture_time = 40 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // A map from relative filepath to the source object. For example, an asset
+  // could have the following sources:
+  //
+  // {
+  //    "cad.dwg":        {Source},
+  //    "font.ttf":       {Source},
+  //    "images/dog.png": {Source}
+  // }
+  //
+  // Filepaths must be unique across all sources and their keys in the map must match
+  // their filepath attribute.
+  // See `Asset.Source` message for more information on what each source contains.
+  //
+  // Once created, this map cannot have sources added or removed, however each
+  // source can be individually updated.
+  map<string, Source> sources = 59 [(google.api.field_behavior) = IMMUTABLE];
+
+  // Filepath of the main source. Must be a key in the sources map.
+  // This source is used to decide the what processing job to trigger.
+  string main_source = 889 [(google.api.field_behavior) = IMMUTABLE];
+
+  // Output generated by a processing job. An asset has no intrisic knowledge
+  // on how its output is loaded except for the `loading` object,
+  // which contains a reference which should be interpertred by the consumer.
+  // Usually outputs will contain references to manifests which will have more
+  // information on the output.
+  message Output {
+    // Path in S3. Always starts with `Asset.path_prefix` and will live in `Asset.bucket`.
+    // Usually a path to the output manifest.
+    string path = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Information on how to load this output.
+    message Loading {
+      // Freeform field for this output format. It should contain enough information
+      // so that a consumer can decide how to load this output. Will look something like
+      // "kml", "tileset", "slippy_map_tiles".
+      // Meaning is to be interpreted by consumer.
+      string format = 1 [(google.api.field_behavior) = REQUIRED];
+
+      // Revision of the loader. Meaning is to be interpreted by consumer.
+      // follows semver: vMAJOR.MINOR.PATCH
+      string revision = 2 [
+        (google.api.field_behavior) = REQUIRED
+      ];
+    }
+
+    // Information on how to load this output.
+    Loading loading = 54 [(google.api.field_behavior) = REQUIRED];
+
+    // Possible CRS types.
+    enum CRS {
+      // Unspecified. Unused and enforced by validation.
+      CRS_UNSPECIFIED = 0;
+
+      // Project CRS. Being phased out in favour of Sensat Mercator.
+      PROJECT = 1;
+
+      // Sensat Mercator CRS.
+      SENSAT_MERCATOR = 2;
+    }
+
+    // CRS type this output was processed to.
+    CRS crs = 89 [
+      (google.api.field_behavior) = REQUIRED
+    ];
+
+    // Maximum zoom level this entity shows up in.
+    // Used by 2D datasets such as Slippy Map Tiles or Vector files processed from DXFs.
+    int64 max_zoom = 66 [
+      (google.api.field_behavior) = OPTIONAL
+    ];
+
+    // Minimum zoom level this entity shows up in.
+    // Used by 2D datasets such as Slippy Map Tiles or Vector files processed from DXFs.
+    int64 min_zoom = 11 [
+      (google.api.field_behavior) = OPTIONAL
+    ];
+
+    // Used to know when to colorize height-based pointclouds.
+    //
+    // Default value is false.
+    bool has_rgb = 51 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Asset Output. See `Asset.Output` message for more information.
+  Output output = 231 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Asset access information.
+  message Access {
+    // User who created this asset.
+    string creator = 1 [
+      (google.api.field_behavior) = OUTPUT_ONLY,
+      (google.api.resource_reference).type = "api.sensat.world/User"
+    ];
+
+    // Stopgap solution while we don't implement proper authorization.
+    // Used in markup/comment attachments and viewpoint thumbnails so
+    // contributors have access to files they normally don't have access to.
+    //
+    // Default value is false.
+    bool is_public = 32 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Asset access information.
+  Access access = 209 [(google.api.field_behavior) = OPTIONAL];
+
+  // Information used for keeping track of assets synced from remote
+  // file stores. These are usually CDEs such as ACC, ProjectWise
+  // or Aconex.
+  message SyncTracking {
+    // External ID defined in the origin.
+    string external_id = 1 [(google.api.field_behavior) = IMMUTABLE];
+
+    // Integration that manages keeping this asset in sync with the origin
+    string integration = 23 [
+      (google.api.field_behavior) = IMMUTABLE,
+      (google.api.resource_reference).type = "api.sensat.world/Integration"
+    ];
+
+    // Revision of the original source, as defined in the origin.
+    int64 revision = 2 [(google.api.field_behavior) = REQUIRED];
+
+    // Time of the last update for this source in the origin.
+    google.protobuf.Timestamp update_time = 11 [(google.api.field_behavior) = REQUIRED];
+
+    // Checksum information for the file. Used to known when the original source file
+    // was updated.
+    message Checksum {
+      // Hash value.
+      string value = 1 [(google.api.field_behavior) = REQUIRED];
+
+      // List of possible algorithms used for hashing.
+      enum Algorithm {
+        // Unspecified. Unused and disallowed by validation.
+        ALGORITHM_UNSPECIFIED = 0;
+
+        // MD5
+        MD5 = 1;
+      }
+
+      // Which algorithm was used to generate the hash.
+      Algorithm algorithm = 3 [
+        (google.api.field_behavior) = REQUIRED
+      ];
+    }
+
+    // Checksum information.
+    Checksum checksum = 39 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Information necessary to track this asset's sync process.
+  SyncTracking sync_tracking = 91 [(google.api.field_behavior) = OPTIONAL];
+
+  // Information on this asset's timeline visibility
+  message Timeline {
+    // Date for when this asset starts showing up in the timeline. If unset, it displays from the
+    // beggining of time
+    google.type.Date start_date = 1 [(google.api.field_behavior) = OPTIONAL];
+
+    // Date for when this asset stops showing up in the timeline. If unset, it displays to the
+    // end of time
+    google.type.Date end_date = 2 [(google.api.field_behavior) = OPTIONAL];
+
+    // Visibity types
+    enum Visibility {
+      // Default value, unspecified visibility. Behaves the same as TEMPORARY
+      VISIBILITY_UNSPECIFIED = 0;
+      // Permament. Shows during and after the specified time range.
+      PERMANENT = 1;
+      // Temporary. Shows only during the specified time range.
+      TEMPORARY = 2;
+    }
+
+    // How end date is interpreted.
+    Visibility visibility = 3 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Timeline of the asset
+  Timeline timeline = 812 [(google.api.field_behavior) = OPTIONAL];
+}
