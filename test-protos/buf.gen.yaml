@@ -11,10 +11,11 @@ plugins:
   - plugin: ts_proto
     out: gen/
     opt:
-      - outputClientImpl=true
+      - outputClientImpl=aip-json-web
       - lowerCaseServiceMethods=true
       - esModuleInterop=true
       - returnObservable=true
       - useJsonWireFormat=true
       - outputEncodeMethods=false
       - unrecognizedEnum=false
+      # - useOptionals=all # todo support field behaviour annotations, enable this

@@ -15,6 +15,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@angular/common@npm:^17.3.1":
+  version: 17.3.1
+  resolution: "@angular/common@npm:17.3.1"
+  dependencies:
+    tslib: ^2.3.0
+  peerDependencies:
+    "@angular/core": 17.3.1
+    rxjs: ^6.5.3 || ^7.4.0
+  checksum: 41d7ad787a586ea44d36f1779fbec345a102f1caf00606b60e00b5824f2a2b49411268b88a14863fe7665bf360a114ef4162b537514dbbad9f3f8a64201be0ff
+  languageName: node
+  linkType: hard
+
 "@angular/core@npm:^17.3.0":
   version: 17.3.0
   resolution: "@angular/core@npm:17.3.0"
@@ -7873,6 +7885,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ts-proto@workspace:."
   dependencies:
+    "@angular/common": ^17.3.1
     "@angular/core": ^17.3.0
     "@grpc/grpc-js": ^1.8.17
     "@grpc/proto-loader": ^0.7.8
