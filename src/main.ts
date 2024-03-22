@@ -100,6 +100,7 @@ import {
   safeAccessor,
 } from "./utils";
 import { visit, visitServices } from "./visit";
+import { generateAipJsonWebClientImpl } from "./generate-aip-json-web";
 
 export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [string, Code] {
   const { options, utils } = ctx;
@@ -350,6 +351,8 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
               hasServerStreamingMethods = true;
             }
           });
+        }  else if (options.outputClientImpl === "aip-json-web") {
+          chunks.push(generateAipJsonWebClientImpl(ctx, fileDesc, serviceDesc));
         }
       }
     });

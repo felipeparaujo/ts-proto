@@ -1306,80 +1306,136 @@ export class AssetServiceClient implements AssetService {
     this.service = this.opts?.service || AssetServiceServiceName;
   }
   createAsset(request: CreateAssetRequest): Observable<Asset> {
-    const data = CreateAssetRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "CreateAsset", data);
+    const data = CreateAssetRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
   }
 
   getAsset(request: GetAssetRequest): Observable<Asset> {
-    const data = GetAssetRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "GetAsset", data);
+    const data = GetAssetRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
   }
 
   updateAsset(request: UpdateAssetRequest): Observable<Asset> {
-    const data = UpdateAssetRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "UpdateAsset", data);
+    const data = UpdateAssetRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
   }
 
   deleteAsset(request: DeleteAssetRequest): Observable<Asset> {
-    const data = DeleteAssetRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "DeleteAsset", data);
+    const data = DeleteAssetRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
   }
 
   listAssets(request: ListAssetsRequest): Observable<ListAssetsResponse> {
-    const data = ListAssetsRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "ListAssets", data);
+    const data = ListAssetsRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => ListAssetsResponse.fromJSON(JSON.parse(data))));
   }
 
   batchGetAssets(request: BatchGetAssetsRequest): Observable<BatchGetAssetsResponse> {
-    const data = BatchGetAssetsRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "BatchGetAssets", data);
+    const data = BatchGetAssetsRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => BatchGetAssetsResponse.fromJSON(JSON.parse(data))));
   }
 
   generateAssetTransferUrl(request: GenerateAssetTransferURLRequest): Observable<GenerateAssetTransferURLResponse> {
-    const data = GenerateAssetTransferURLRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "GenerateAssetTransferURL", data);
+    const data = GenerateAssetTransferURLRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => GenerateAssetTransferURLResponse.fromJSON(JSON.parse(data))));
   }
 
   generateAssetDownloadUrl(request: GenerateAssetDownloadURLRequest): Observable<GenerateAssetDownloadURLResponse> {
-    const data = GenerateAssetDownloadURLRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "GenerateAssetDownloadURL", data);
+    const data = GenerateAssetDownloadURLRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => GenerateAssetDownloadURLResponse.fromJSON(JSON.parse(data))));
   }
 
   overwriteAsset(request: OverwriteAssetRequest): Observable<OverwriteAssetResponse> {
-    const data = OverwriteAssetRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "OverwriteAsset", data);
+    const data = OverwriteAssetRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => OverwriteAssetResponse.fromJSON(JSON.parse(data))));
   }
 
   activateAsset(request: ActivateAssetRequest): Observable<ActivateAssetResponse> {
-    const data = ActivateAssetRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "ActivateAsset", data);
+    const data = ActivateAssetRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => ActivateAssetResponse.fromJSON(JSON.parse(data))));
   }
 
   completeAsset(request: CompleteAssetRequest): Observable<CompleteAssetResponse> {
-    const data = CompleteAssetRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "CompleteAsset", data);
+    const data = CompleteAssetRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => CompleteAssetResponse.fromJSON(JSON.parse(data))));
   }
 
   failAsset(request: FailAssetRequest): Observable<FailAssetResponse> {
-    const data = FailAssetRequest.encode(request).finish();
-    const result = this.rpc.request(this.service, "FailAsset", data);
+    const data = FailAssetRequest.toJSON(request);
+    const result = this.http.request(method, url, {
+      body,
+      headers: angularHeaders,
+      withCredentials: true,
+      responseType: "text",
+    });
     return result.pipe(map((data) => FailAssetResponse.fromJSON(JSON.parse(data))));
   }
-}
-
-interface Rpc {
-  request(service: string, method: string, data: Uint8Array): Promise<Uint8Array>;
 }
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
