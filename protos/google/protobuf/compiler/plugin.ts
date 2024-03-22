@@ -44,7 +44,7 @@ export interface CodeGeneratorRequest {
    */
   protoFile: FileDescriptorProto[];
   /** The version number of protocol compiler. */
-  compilerVersion: Version | undefined;
+  compilerVersion?: Version | undefined;
   _unknownFields?: { [key: number]: Uint8Array[] } | undefined;
 }
 
@@ -167,7 +167,7 @@ export interface CodeGeneratorResponse_File {
    * point is used, this information will be appropriately offset and inserted
    * into the code generation metadata for the generated files.
    */
-  generatedCodeInfo: GeneratedCodeInfo | undefined;
+  generatedCodeInfo?: GeneratedCodeInfo | undefined;
   _unknownFields?: { [key: number]: Uint8Array[] } | undefined;
 }
 
@@ -304,7 +304,7 @@ export const Version = {
 };
 
 function createBaseCodeGeneratorRequest(): CodeGeneratorRequest {
-  return { fileToGenerate: [], parameter: "", protoFile: [], compilerVersion: undefined };
+  return { fileToGenerate: [], parameter: "", protoFile: [] };
 }
 
 export const CodeGeneratorRequest = {
@@ -557,7 +557,7 @@ export const CodeGeneratorResponse = {
 };
 
 function createBaseCodeGeneratorResponse_File(): CodeGeneratorResponse_File {
-  return { name: "", insertionPoint: "", content: "", generatedCodeInfo: undefined };
+  return { name: "", insertionPoint: "", content: "" };
 }
 
 export const CodeGeneratorResponse_File = {

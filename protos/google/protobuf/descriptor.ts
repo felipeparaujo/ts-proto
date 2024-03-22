@@ -31,7 +31,7 @@ export interface FileDescriptorProto {
   enumType: EnumDescriptorProto[];
   service: ServiceDescriptorProto[];
   extension: FieldDescriptorProto[];
-  options:
+  options?:
     | FileOptions
     | undefined;
   /**
@@ -40,7 +40,7 @@ export interface FileDescriptorProto {
    * functionality of the descriptors -- the information is needed only by
    * development tools.
    */
-  sourceCodeInfo:
+  sourceCodeInfo?:
     | SourceCodeInfo
     | undefined;
   /**
@@ -60,7 +60,7 @@ export interface DescriptorProto {
   enumType: EnumDescriptorProto[];
   extensionRange: DescriptorProto_ExtensionRange[];
   oneofDecl: OneofDescriptorProto[];
-  options: MessageOptions | undefined;
+  options?: MessageOptions | undefined;
   reservedRange: DescriptorProto_ReservedRange[];
   /**
    * Reserved field names, which may not be used by fields in the same message.
@@ -75,7 +75,7 @@ export interface DescriptorProto_ExtensionRange {
   start: number;
   /** Exclusive. */
   end: number;
-  options: ExtensionRangeOptions | undefined;
+  options?: ExtensionRangeOptions | undefined;
   _unknownFields?: { [key: number]: Uint8Array[] } | undefined;
 }
 
@@ -141,7 +141,7 @@ export interface FieldDescriptorProto {
    * it to camelCase.
    */
   jsonName: string;
-  options:
+  options?:
     | FieldOptions
     | undefined;
   /**
@@ -365,7 +365,7 @@ export function fieldDescriptorProto_LabelToJSON(object: FieldDescriptorProto_La
 /** Describes a oneof. */
 export interface OneofDescriptorProto {
   name: string;
-  options: OneofOptions | undefined;
+  options?: OneofOptions | undefined;
   _unknownFields?: { [key: number]: Uint8Array[] } | undefined;
 }
 
@@ -373,7 +373,7 @@ export interface OneofDescriptorProto {
 export interface EnumDescriptorProto {
   name: string;
   value: EnumValueDescriptorProto[];
-  options:
+  options?:
     | EnumOptions
     | undefined;
   /**
@@ -410,7 +410,7 @@ export interface EnumDescriptorProto_EnumReservedRange {
 export interface EnumValueDescriptorProto {
   name: string;
   number: number;
-  options: EnumValueOptions | undefined;
+  options?: EnumValueOptions | undefined;
   _unknownFields?: { [key: number]: Uint8Array[] } | undefined;
 }
 
@@ -418,7 +418,7 @@ export interface EnumValueDescriptorProto {
 export interface ServiceDescriptorProto {
   name: string;
   method: MethodDescriptorProto[];
-  options: ServiceOptions | undefined;
+  options?: ServiceOptions | undefined;
   _unknownFields?: { [key: number]: Uint8Array[] } | undefined;
 }
 
@@ -431,7 +431,7 @@ export interface MethodDescriptorProto {
    */
   inputType: string;
   outputType: string;
-  options:
+  options?:
     | MethodOptions
     | undefined;
   /** Identifies if client streams multiple client messages */
@@ -1248,8 +1248,6 @@ function createBaseFileDescriptorProto(): FileDescriptorProto {
     enumType: [],
     service: [],
     extension: [],
-    options: undefined,
-    sourceCodeInfo: undefined,
     syntax: "",
   };
 }
@@ -1545,7 +1543,6 @@ function createBaseDescriptorProto(): DescriptorProto {
     enumType: [],
     extensionRange: [],
     oneofDecl: [],
-    options: undefined,
     reservedRange: [],
     reservedName: [],
   };
@@ -1782,7 +1779,7 @@ export const DescriptorProto = {
 };
 
 function createBaseDescriptorProto_ExtensionRange(): DescriptorProto_ExtensionRange {
-  return { start: 0, end: 0, options: undefined };
+  return { start: 0, end: 0 };
 }
 
 export const DescriptorProto_ExtensionRange = {
@@ -2151,7 +2148,6 @@ function createBaseFieldDescriptorProto(): FieldDescriptorProto {
     defaultValue: "",
     oneofIndex: 0,
     jsonName: "",
-    options: undefined,
     proto3Optional: false,
   };
 }
@@ -2392,7 +2388,7 @@ export const FieldDescriptorProto = {
 };
 
 function createBaseOneofDescriptorProto(): OneofDescriptorProto {
-  return { name: "", options: undefined };
+  return { name: "" };
 }
 
 export const OneofDescriptorProto = {
@@ -2496,7 +2492,7 @@ export const OneofDescriptorProto = {
 };
 
 function createBaseEnumDescriptorProto(): EnumDescriptorProto {
-  return { name: "", value: [], options: undefined, reservedRange: [], reservedName: [] };
+  return { name: "", value: [], reservedRange: [], reservedName: [] };
 }
 
 export const EnumDescriptorProto = {
@@ -2751,7 +2747,7 @@ export const EnumDescriptorProto_EnumReservedRange = {
 };
 
 function createBaseEnumValueDescriptorProto(): EnumValueDescriptorProto {
-  return { name: "", number: 0, options: undefined };
+  return { name: "", number: 0 };
 }
 
 export const EnumValueDescriptorProto = {
@@ -2870,7 +2866,7 @@ export const EnumValueDescriptorProto = {
 };
 
 function createBaseServiceDescriptorProto(): ServiceDescriptorProto {
-  return { name: "", method: [], options: undefined };
+  return { name: "", method: [] };
 }
 
 export const ServiceDescriptorProto = {
@@ -2989,14 +2985,7 @@ export const ServiceDescriptorProto = {
 };
 
 function createBaseMethodDescriptorProto(): MethodDescriptorProto {
-  return {
-    name: "",
-    inputType: "",
-    outputType: "",
-    options: undefined,
-    clientStreaming: false,
-    serverStreaming: false,
-  };
+  return { name: "", inputType: "", outputType: "", clientStreaming: false, serverStreaming: false };
 }
 
 export const MethodDescriptorProto = {
