@@ -1,7 +1,7 @@
 /* eslint-disable */
-import { HttpClient } from "@angular/common/http";
-import { Injectable } from "@angular/core";
-import { Observable } from "rxjs";
+import { HttpClient, HttpHeaders } from "@angular/common/http";
+import { Inject, Injectable } from "@angular/core";
+import { BehaviorSubject, Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { FieldMask } from "../../../../google/protobuf/field_mask";
 import { Asset, Asset_Lifecycle_FailureDetails, Asset_Output, Asset_SyncTracking } from "./entities";
@@ -1301,141 +1301,252 @@ export interface AssetService {
 export const AssetServiceServiceName = "sensat.data.assets.v4alpha1.AssetService";
 @Injectable({ providedIn: "root" })
 export class AssetServiceClient implements AssetService {
-  private readonly service: string;
-  constructor(private readonly http: HttpClient, private readonly opts?: { service?: string }) {
-    this.service = this.opts?.service || AssetServiceServiceName;
-  }
+  constructor(
+    private readonly http: HttpClient,
+    @Inject("BASE_URL") private readonly baseUrl: BehaviorSubject<string>,
+  ) {}
   createAsset(request: CreateAssetRequest): Observable<Asset> {
-    const data = CreateAssetRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{parent=projects/*}/assets",
+      "asset",
+      CreateAssetRequest.toJSON(request),
+    );
+    return this.http.request("POST", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
   }
 
   getAsset(request: GetAssetRequest): Observable<Asset> {
-    const data = GetAssetRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{name=projects/*/assets/*}",
+      "*",
+      GetAssetRequest.toJSON(request),
+    );
+    return this.http.request("GET", url.href, { body: undefined, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
   }
 
   updateAsset(request: UpdateAssetRequest): Observable<Asset> {
-    const data = UpdateAssetRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{asset.name=projects/*/assets/*}",
+      "asset",
+      UpdateAssetRequest.toJSON(request),
+    );
+    return this.http.request("PATCH", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
   }
 
   deleteAsset(request: DeleteAssetRequest): Observable<Asset> {
-    const data = DeleteAssetRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{name=projects/*/assets/*}",
+      "*",
+      DeleteAssetRequest.toJSON(request),
+    );
+    return this.http.request("DELETE", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => Asset.fromJSON(JSON.parse(data))));
   }
 
   listAssets(request: ListAssetsRequest): Observable<ListAssetsResponse> {
-    const data = ListAssetsRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => ListAssetsResponse.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{parent=projects/*}/assets",
+      "*",
+      ListAssetsRequest.toJSON(request),
+    );
+    return this.http.request("GET", url.href, { body: undefined, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => ListAssetsResponse.fromJSON(JSON.parse(data))));
   }
 
   batchGetAssets(request: BatchGetAssetsRequest): Observable<BatchGetAssetsResponse> {
-    const data = BatchGetAssetsRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => BatchGetAssetsResponse.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{parent=project/*}/assets:batchGet",
+      "*",
+      BatchGetAssetsRequest.toJSON(request),
+    );
+    return this.http.request("GET", url.href, { body: undefined, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => BatchGetAssetsResponse.fromJSON(JSON.parse(data))));
   }
 
   generateAssetTransferUrl(request: GenerateAssetTransferURLRequest): Observable<GenerateAssetTransferURLResponse> {
-    const data = GenerateAssetTransferURLRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => GenerateAssetTransferURLResponse.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{name=projects/*/assets/*}:generateTransferUrl",
+      "*",
+      GenerateAssetTransferURLRequest.toJSON(request),
+    );
+    return this.http.request("POST", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => GenerateAssetTransferURLResponse.fromJSON(JSON.parse(data))));
   }
 
   generateAssetDownloadUrl(request: GenerateAssetDownloadURLRequest): Observable<GenerateAssetDownloadURLResponse> {
-    const data = GenerateAssetDownloadURLRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => GenerateAssetDownloadURLResponse.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{name=projects/*/assets/*}:generateDownloadUrl",
+      "*",
+      GenerateAssetDownloadURLRequest.toJSON(request),
+    );
+    return this.http.request("POST", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => GenerateAssetDownloadURLResponse.fromJSON(JSON.parse(data))));
   }
 
   overwriteAsset(request: OverwriteAssetRequest): Observable<OverwriteAssetResponse> {
-    const data = OverwriteAssetRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => OverwriteAssetResponse.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{name=projects/*/assets/*}:overwrite",
+      "*",
+      OverwriteAssetRequest.toJSON(request),
+    );
+    return this.http.request("POST", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => OverwriteAssetResponse.fromJSON(JSON.parse(data))));
   }
 
   activateAsset(request: ActivateAssetRequest): Observable<ActivateAssetResponse> {
-    const data = ActivateAssetRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => ActivateAssetResponse.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{name=projects/*/assets/*}:activate",
+      "*",
+      ActivateAssetRequest.toJSON(request),
+    );
+    return this.http.request("POST", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => ActivateAssetResponse.fromJSON(JSON.parse(data))));
   }
 
   completeAsset(request: CompleteAssetRequest): Observable<CompleteAssetResponse> {
-    const data = CompleteAssetRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => CompleteAssetResponse.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{name=projects/*/assets/*}:complete",
+      "*",
+      CompleteAssetRequest.toJSON(request),
+    );
+    return this.http.request("POST", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => CompleteAssetResponse.fromJSON(JSON.parse(data))));
   }
 
   failAsset(request: FailAssetRequest): Observable<FailAssetResponse> {
-    const data = FailAssetRequest.toJSON(request);
-    const result = this.http.request(method, url, {
-      body,
-      headers: angularHeaders,
-      withCredentials: true,
-      responseType: "text",
-    });
-    return result.pipe(map((data) => FailAssetResponse.fromJSON(JSON.parse(data))));
+    const { url, body, headers } = buildCall(
+      this.baseUrl.value,
+      "/v4alpha1/{name=projects/*/assets/*}:fail",
+      "*",
+      FailAssetRequest.toJSON(request),
+    );
+    return this.http.request("POST", url.href, { body: body, headers, withCredentials: true, responseType: "text" })
+      .pipe(map((data) => FailAssetResponse.fromJSON(JSON.parse(data))));
   }
+}
+function buildCall(
+  baseUrl: string,
+  path: string,
+  bodySelector: string,
+  bodyPathAndParams: any,
+  headers: HttpHeaders = new HttpHeaders(),
+): { body: any; headers: HttpHeaders; url: URL } {
+  const [bodyAndParams, fullPath] = replacePathParams(path, bodyPathAndParams);
+  const [params, body] = formatBody(bodySelector, bodyAndParams);
+  const url = encodeSearchParams(new URL(fullPath, baseUrl), params);
+
+  // ensure content-type header is present
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return { url, body, headers };
+}
+
+function encodeSearchParams(url: URL, request: any): URL {
+  const searchparams = new URLSearchParams();
+  for (const [name, value] of Object.entries(request)) {
+    for (const param of encodeSearchParam(name, value)) {
+      if (value !== "" && value !== undefined && value !== null) {
+        searchparams.append(param.name, param.value as string);
+        url.searchParams.append(param.name, param.value);
+      }
+    }
+  }
+
+  return url;
+}
+
+function encodeSearchParam(name: string, value: any): { name: string; value: any }[] {
+  const result: Array<{ name: string; value: string }> = [];
+
+  // repeated search params aren't allowed by grpc-gateway: see
+  // https://github.com/grpc-ecosystem/grpc-gateway/blob/v2.15.2/runtime/query.go#L100-L103
+  if (Array.isArray(value)) {
+    return result;
+  }
+
+  // if this is an object, recursively encode it.
+  // for {param: {param2: val}} the encoding should be
+  // param.param2=val
+  if (typeof value === "object" && value !== null) {
+    for (const key in value) {
+      for (const encoded of encodeSearchParam(key, value[key])) {
+        result.push({ name: name + "." + encoded.name, value: encoded.value });
+      }
+    }
+
+    return result;
+  }
+
+  result.push({ name, value: value });
+  return result;
+}
+
+function formatBody(bodySelector: string, request: any): [any, string] {
+  // if no body is specified, no body will be sent in the request
+  if (!bodySelector) {
+    return [request, ""];
+  }
+
+  let body = request;
+
+  // "*" is a special value in HttpRule's definition that says we should use the whole object
+  // as the request body.
+  if (bodySelector === "*") {
+    request = {};
+  } else {
+    // body parameters are in snake_case but attributes are in camelCase
+    // so convert here
+    body = request[toCamelCase(bodySelector)];
+    delete request[toCamelCase(bodySelector)];
+  }
+
+  return [request, JSON.stringify(body)];
+}
+
+// support aip-127 (https://google.aip.dev/127) http to grpc transcoding path params
+function replacePathParams(path: string, request: any): [any, string] {
+  // capture fields like {abc} or {abc=def/ghi/*}.
+  // discard the pattern after the equal sign.
+  // relies on greedy capture within first part
+  // to avoid matching 2nd group when no equal sign present.
+  const pattern = new RegExp(/{([^=}]+)=?([^}]+)?}/g);
+  const matches = path.matchAll(pattern);
+  for (const match of matches) {
+    // a match consists of three groups. For {abc=def/ghi/*}:
+    // 1 - {abc=def/ghi/*}
+    // 2 - abc
+    // 3 - def/ghi/*
+    // we replace (1) with (2)'s value in the request object
+    // and (3) gets dropped.
+    // the replaced value is then deleted from the request object
+    const keys = match[1].split(".");
+    const prop = toCamelCase(keys.pop()!);
+    const req = keys.reduce((r, key) => r[toCamelCase(key)], request);
+
+    path = path.replace(match[0], req[toCamelCase(prop)] as string);
+    delete req[prop];
+  }
+
+  return [request, path];
+}
+
+function toCamelCase(str: string): string {
+  return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
 }
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
